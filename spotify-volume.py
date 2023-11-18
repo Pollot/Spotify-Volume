@@ -45,14 +45,15 @@ while volume % volume_step != 0:
 
 try:
     sp.volume(volume)
-    print(f"Current volume: {volume}%")
 except SpotifyException as exception:
     print("Couldn't set the initial volume")
 
 if volume == 0:
     muted = True
+    print("Playback is muted")
 else:
     muted = False
+    print(f"Current volume: {volume}%")
 
 def display_current_song():
     global playback_data
