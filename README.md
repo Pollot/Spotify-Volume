@@ -37,3 +37,12 @@ exit = "f12"
 ```
 
 2. Run the Python script by opening the ```spotify-volume.bat``` file or through the shell with ```python [path]/spotify-volume.py```. Running the script directly won't work because it needs to create a cache file for your Spotify token.
+
+# Additional information
+You can change specific settings by modifying these lines of code:
+```python
+volume_step = 2 # The increment/decrement step size for volume adjustments
+max_volume = 100 # Maximum playback volume
+min_volume = 0 # Minimum playback volume
+playback_refresh = 10 # Time in seconds to refresh playback data (for displaying current song)
+```
