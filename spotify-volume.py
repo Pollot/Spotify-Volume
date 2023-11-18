@@ -7,18 +7,17 @@ from spotipy.oauth2 import SpotifyOAuth
 from spotipy.exceptions import SpotifyException
 import keyboard
 
-# Binds
+# Keybinds
 volume_up_key = "f13"
 volume_down_key = "f14"
 volume_mute_key = "f15"
 exit = "f12"
 
 # Variables
-volume_step = 2
-max_volume = 100
-min_volume = 0
-muted = False
-playback_refresh = 10 # Time in seconds to refresh playback data
+volume_step = 2 # The increment/decrement step size for volume adjustments
+max_volume = 100 # Maximum playback volume
+min_volume = 0 # Minimum playback volume
+playback_refresh = 10 # Time in seconds to refresh playback data (for displaying current song)
 
 load_dotenv()
 client_id = os.getenv("CLIENT_ID")
@@ -50,6 +49,10 @@ try:
 except SpotifyException as exception:
     print("Couldn't set the initial volume")
 
+if volume == 0:
+    muted = True
+else:
+    muted = False
 
 def display_current_song():
     global playback_data
