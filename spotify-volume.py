@@ -32,32 +32,12 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secre
 def clear_terminal():
     os.system('cls' if os.name=='nt' else 'clear')
 
-playback_data = sp.current_playback()
-
-if playback_data:
-    current_song = playback_data["item"]["name"]
-    clear_terminal()
-    print(f"Now playing: {current_song}")
-
-    volume = int(playback_data["device"]["volume_percent"]) # Playback volume
-    # Ensure that volume is divisible by volume_step
-    while volume % volume_step != 0:
-        if volume < max_volume - volume_step:
-            volume += 1
-        else:
-            volume -= 1
-    sp.volume(volume)
-    print(f"Playback volume: {volume}%")
-else:
-    volume = 20 # Initial volume if playback volume is not available
-    current_song = None
-    print("Nothing is currently playing")
-
-block_keys = False
+volume = 0 # Initial volume, it will change after playback has been started
+block_keys = False # It will block keys, unless there is a song playing
 
 def refresh_playback_data():
-    global playback_data
-    global current_song
+    current_song = None
+    global volume
     global block_keys
 
     while True:
@@ -65,15 +45,27 @@ def refresh_playback_data():
 
         if playback_data:
             new_song = playback_data["item"]["name"]
+
             if current_song != new_song or block_keys == True:
                 current_song = new_song
                 clear_terminal()
                 print(f"Now playing: {current_song}")
                 
-                volume = playback_data["device"]["volume_percent"]    
+                volume = int(playback_data["device"]["volume_percent"])
+                # Ensure that volume is divisible by volume_step
+                while volume % volume_step != 0:
+                    if volume < max_volume - volume_step:
+                        volume += 1
+                    else:
+                        volume -= 1
+                try:
+                    sp.volume(volume)
+                except SpotifyException as exception:
+                    pass  
                 print(f"Playback volume: {volume}%")
             
             block_keys = False
+
         else:
             if block_keys == False:
                 clear_terminal()
