@@ -13,12 +13,18 @@ volume_down_key = "f14"
 volume_mute_key = "f15"
 exit_key = "f12"
 
-# Variables
+# Settings
 volume_step = 2   # The increment/decrement step size for volume adjustments
 max_volume = 100  # Maximum playback volume
 min_volume = 0    # Minimum playback volume
 bar_length = 25   # Volume bar length
 refresh_rate = 10 # Time in seconds to refresh playback data
+
+# Dynamic variables (don't modify them!)
+volume = 0          # Initial volume, it will change after playback has been started
+block_keys = False  # Blocks keys, unless there is a song playing
+restriction = False # If API restriction is active
+muted = False       # If playback is muted
 
 load_dotenv()
 client_id = os.getenv("CLIENT_ID")
@@ -50,16 +56,24 @@ def print_volume(volume):
 def print_muted():
     print_inline("Playback is muted")
 
-def print_blocked():
-    print_inline("Can't change volume becaue nothing is currently playing")
+def exception_handling(exception):
+    global block_keys
+    global restriction
 
-volume = 0 # Initial volume, it will change after playback has been started
-block_keys = False # It will block keys, unless there is a song playing
+    if exception.http_status == 403:
+        clear_terminal()
+        print("API restriction violated, please wait a moment")
+        block_keys = True
+        restriction = True
+    else:
+        pass
+
 
 def refresh_playback_data():
     current_song = None
     global volume
     global block_keys
+    global restriction
 
     while True:
         playback_data = sp.current_playback()
@@ -70,8 +84,8 @@ def refresh_playback_data():
             if current_song != new_song or block_keys == True:
                 current_song = new_song
 
-                album = playback_data["item"]["album"]["name"]
                 artists = ", ".join([artist["name"] for artist in playback_data["item"]["artists"]])
+                album = playback_data["item"]["album"]["name"]
 
                 clear_terminal()
                 print(f"Now playing: {current_song} by {artists}")
@@ -86,14 +100,17 @@ def refresh_playback_data():
                         volume -= 1
                 try:
                     sp.volume(volume)
+                    restriction = False
+                    print_volume(volume)
                 except SpotifyException as exception:
-                    pass  
-                print_volume(volume)
-            
-            block_keys = False
+                    exception_handling(exception)
+                    sleep(20) # Increase refresh rate to avoid restriciton
+                
+            if restriction is False:
+                block_keys = False
 
         else:
-            if block_keys == False:
+            if block_keys is False:
                 clear_terminal()
                 print("Nothing is currently playing")
                 block_keys = True
@@ -106,14 +123,8 @@ song_thread.daemon = True  # The thread will exit when the main program exits
 song_thread.start()
 
 
-muted = False
-
 def volume_up(key):
-    if muted:
-        return
-    
-    if block_keys:
-        print_blocked()
+    if muted or block_keys:
         return
     
     keyboard.block_key(volume_up_key)
@@ -125,17 +136,13 @@ def volume_up(key):
             sp.volume(volume)
             print_volume(volume)
     except SpotifyException as exception:
-        pass
+        exception_handling(exception)
 
     keyboard.unblock_key(volume_up_key)
 
 
 def volume_down(key):
-    if muted:
-        return
-    
-    if block_keys:
-        print_blocked()
+    if muted or block_keys:
         return
 
     keyboard.block_key(volume_down_key)
@@ -147,14 +154,12 @@ def volume_down(key):
             sp.volume(volume)
             print_volume(volume)
     except SpotifyException as exception:
-        pass
+        exception_handling(exception)
 
     keyboard.unblock_key(volume_down_key)
 
-
 def volume_mute(key):
     if block_keys:
-        print_blocked()
         return
     
     keyboard.block_key(volume_mute_key)
@@ -170,7 +175,7 @@ def volume_mute(key):
             muted = True
             print_muted()
     except SpotifyException as exception:
-        pass
+        exception_handling(exception)
     
     keyboard.unblock_key(volume_mute_key)
 
