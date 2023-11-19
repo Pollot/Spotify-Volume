@@ -29,10 +29,14 @@ scope = "user-read-playback-state,user-modify-playback-state" # Permissions
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secret=client_secret,
                                                redirect_uri=redirect_uri, scope=scope))
 
+def clear_terminal():
+    os.system('cls' if os.name=='nt' else 'clear')
+
 playback_data = sp.current_playback()
 
 if playback_data:
     current_song = playback_data["item"]["name"]
+    clear_terminal()
     print(f"Now playing: {current_song}")
 
     volume = int(playback_data["device"]["volume_percent"]) # Playback volume
@@ -49,31 +53,32 @@ else:
     current_song = None
     print("Nothing is currently playing")
 
+block_keys = False
 
 def refresh_playback_data():
     global playback_data
     global current_song
-    print_nothing = True
+    global block_keys
 
     while True:
         playback_data = sp.current_playback()
 
         if playback_data:
             new_song = playback_data["item"]["name"]
-            if current_song != new_song or print_nothing == False:
+            if current_song != new_song or block_keys == True:
                 current_song = new_song
-                os.system('cls' if os.name=='nt' else 'clear')
+                clear_terminal()
                 print(f"Now playing: {current_song}")
                 
                 volume = playback_data["device"]["volume_percent"]    
                 print(f"Playback volume: {volume}%")
             
-            print_nothing = True
+            block_keys = False
         else:
-            if print_nothing:
-                os.system('cls' if os.name=='nt' else 'clear')
+            if block_keys == False:
+                clear_terminal()
                 print("Nothing is currently playing")
-                print_nothing = False
+                block_keys = True
         
         sleep(refresh_rate)
 
@@ -89,6 +94,11 @@ def volume_up(key):
     if muted:
         print("Playback is muted")
         return
+    
+    if block_keys:
+        print("Can't change volume becaue nothing is currently playing")
+        return
+    
     keyboard.block_key(volume_up_key)
     global volume
     try:
@@ -98,18 +108,20 @@ def volume_up(key):
             print(f"Volume increased to {volume}%")
         else:
             print(f"Volume is already at {volume}%")
+
     except SpotifyException as exception:
-        print(exception)
-        if exception.http_status == 404:
-            print("Can't change volume becaue nothing is currently playing")
-        else:
-            pass
+        pass
     keyboard.unblock_key(volume_up_key)
 
 def volume_down(key):
     if muted:
         print("Playback is muted")
         return
+    
+    if block_keys:
+        print("Can't change volume becaue nothing is currently playing")
+        return
+
     keyboard.block_key(volume_down_key)
     global volume
     try:
@@ -120,13 +132,14 @@ def volume_down(key):
         else:
             print(f"Volume is already at {volume}%")
     except SpotifyException as exception:
-        if exception.http_status == 404:
-            print("Can't change volume becaue nothing is currently playing")
-        else:
-            pass
+        pass
     keyboard.unblock_key(volume_down_key)
 
 def volume_mute(key):
+    if block_keys:
+        print("Can't change volume becaue nothing is currently playing")
+        return
+    
     keyboard.block_key(volume_mute_key)
     global muted
     try:
@@ -139,10 +152,7 @@ def volume_mute(key):
             muted = True
             print("Playback muted")
     except SpotifyException as exception:
-        if exception.http_status == 404:
-            print("Can't change volume becaue nothing is currently playing")
-        else:
-            pass
+        pass
     keyboard.unblock_key(volume_mute_key)
 
 
