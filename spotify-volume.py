@@ -6,7 +6,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy.exceptions import SpotifyException
 import keyboard
-import sys
 
 # Keybinds
 volume_up_key = "f13"
