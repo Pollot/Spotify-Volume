@@ -74,7 +74,6 @@ def refresh_playback_data():
     current_is_playing = False
     global block_keys
     global volume
-    global muted
     global restriction
 
     while True:
@@ -90,7 +89,7 @@ def refresh_playback_data():
 
                 if current_is_playing is False:
                     clear_terminal()
-                    print("Playback paused")
+                    print("Playback is paused")
                 else:    
                     artists = ", ".join([artist["name"] for artist in playback_data["item"]["artists"]])
                     album = playback_data["item"]["album"]["name"]
@@ -98,21 +97,23 @@ def refresh_playback_data():
                     print(f"Now playing: {current_song} by {artists}")
                     print(f"From: {album}")
                 
-                volume = int(playback_data["device"]["volume_percent"])
-                # Ensure that volume is divisible by volume_step
-                while volume % volume_step != 0:
-                    if volume < max_volume - volume_step:
-                        volume += 1
-                    else:
-                        volume -= 1
-                try:
-                    sp.volume(volume)
-                    muted = False
-                    restriction = False
-                    print_volume(volume)
-                except SpotifyException as exception:
-                    exception_handling(exception)
-                    sleep(25) # Increase refresh rate to avoid restriction
+                if muted:
+                    print_muted()
+                else:
+                    volume = int(playback_data["device"]["volume_percent"])
+                    # Ensure that volume is divisible by volume_step
+                    while volume % volume_step != 0:
+                        if volume < max_volume - volume_step:
+                            volume += 1
+                        else:
+                            volume -= 1
+                    try:
+                        sp.volume(volume)
+                        restriction = False
+                        print_volume(volume)
+                    except SpotifyException as exception:
+                        exception_handling(exception)
+                        sleep(30 - refresh_rate) # Wait before next refresh to avoid restriction
                 
             if restriction is False:
                 block_keys = False
