@@ -11,13 +11,13 @@ import keyboard
 volume_up_key = "f13"
 volume_down_key = "f14"
 volume_mute_key = "f15"
-exit = "f12"
+exit_key = "f12"
 
 # Variables
-volume_step = 2 # The increment/decrement step size for volume adjustments
-max_volume = 100 # Maximum playback volume
-min_volume = 0 # Minimum playback volume
-playback_refresh = 10 # Time in seconds to refresh playback data (for displaying current song)
+volume_step = 2   # The increment/decrement step size for volume adjustments
+max_volume = 100  # Maximum playback volume
+min_volume = 0    # Minimum playback volume
+refresh_rate = 10 # Time in seconds to refresh playback data
 
 load_dotenv()
 client_id = os.getenv("CLIENT_ID")
@@ -32,47 +32,58 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secre
 playback_data = sp.current_playback()
 
 if playback_data:
-    volume = int(playback_data["device"]["volume_percent"]) # Initial player volume
     current_song = playback_data["item"]["name"]
     print(f"Now playing: {current_song}")
+
+    volume = int(playback_data["device"]["volume_percent"]) # Playback volume
+    # Ensure that volume is divisible by volume_step
+    while volume % volume_step != 0:
+        if volume < max_volume - volume_step:
+            volume += 1
+        else:
+            volume -= 1
+    sp.volume(volume)
+    print(f"Playback volume: {volume}%")
 else:
-    volume = 50
+    volume = 20 # Initial volume if playback volume is not available
     current_song = None
     print("Nothing is currently playing")
 
-while volume % volume_step != 0:
-    volume += 1
 
-try:
-    sp.volume(volume)
-except SpotifyException as exception:
-    print("Couldn't set the initial volume")
-
-if volume == 0:
-    muted = True
-    print("Playback is muted")
-else:
-    muted = False
-    print(f"Current volume: {volume}%")
-
-def display_current_song():
+def refresh_playback_data():
     global playback_data
     global current_song
+    print_nothing = True
+
     while True:
         playback_data = sp.current_playback()
+
         if playback_data:
             new_song = playback_data["item"]["name"]
-            if new_song != current_song:
+            if current_song != new_song or print_nothing == False:
                 current_song = new_song
                 os.system('cls' if os.name=='nt' else 'clear')
                 print(f"Now playing: {current_song}")
-        sleep(playback_refresh)
+                
+                volume = playback_data["device"]["volume_percent"]    
+                print(f"Playback volume: {volume}%")
+            
+            print_nothing = True
+        else:
+            if print_nothing:
+                os.system('cls' if os.name=='nt' else 'clear')
+                print("Nothing is currently playing")
+                print_nothing = False
+        
+        sleep(refresh_rate)
 
-# Start the thread for continuous song display
-song_thread = threading.Thread(target=display_current_song)
+# Start the thread for refreshing playback data
+song_thread = threading.Thread(target=refresh_playback_data)
 song_thread.daemon = True  # The thread will exit when the main program exits
 song_thread.start()
 
+
+muted = False
 
 def volume_up(key):
     if muted:
@@ -88,7 +99,11 @@ def volume_up(key):
         else:
             print(f"Volume is already at {volume}%")
     except SpotifyException as exception:
-        pass
+        print(exception)
+        if exception.http_status == 404:
+            print("Can't change volume becaue nothing is currently playing")
+        else:
+            pass
     keyboard.unblock_key(volume_up_key)
 
 def volume_down(key):
@@ -105,7 +120,10 @@ def volume_down(key):
         else:
             print(f"Volume is already at {volume}%")
     except SpotifyException as exception:
-        pass
+        if exception.http_status == 404:
+            print("Can't change volume becaue nothing is currently playing")
+        else:
+            pass
     keyboard.unblock_key(volume_down_key)
 
 def volume_mute(key):
@@ -121,7 +139,10 @@ def volume_mute(key):
             muted = True
             print("Playback muted")
     except SpotifyException as exception:
-        pass
+        if exception.http_status == 404:
+            print("Can't change volume becaue nothing is currently playing")
+        else:
+            pass
     keyboard.unblock_key(volume_mute_key)
 
 
@@ -129,5 +150,5 @@ keyboard.on_press_key(volume_up_key, volume_up)
 keyboard.on_press_key(volume_down_key, volume_down)
 keyboard.on_press_key(volume_mute_key, volume_mute)
 
-keyboard.wait(exit)
+keyboard.wait(exit_key)
 print("Exiting the program...")
