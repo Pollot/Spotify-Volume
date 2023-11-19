@@ -69,8 +69,13 @@ def refresh_playback_data():
 
             if current_song != new_song or block_keys == True:
                 current_song = new_song
+
+                album = playback_data["item"]["album"]["name"]
+                artists = ", ".join([artist["name"] for artist in playback_data["item"]["album"]["artists"]])
+
                 clear_terminal()
                 print(f"Now playing: {current_song}")
+                print(f"From: {album} by {artists}")
                 
                 volume = int(playback_data["device"]["volume_percent"])
                 # Ensure that volume is divisible by volume_step
