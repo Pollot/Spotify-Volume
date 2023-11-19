@@ -113,7 +113,6 @@ def refresh_playback_data():
                         print_volume(volume)
                     except SpotifyException as exception:
                         exception_handling(exception)
-                        sleep(30 - refresh_rate) # Wait before next refresh to avoid restriction
                 
             if restriction is False:
                 block_keys = False
@@ -125,6 +124,9 @@ def refresh_playback_data():
                 block_keys = True
         
         sleep(refresh_rate)
+
+        if restriction:
+            sleep(30)
 
 # Start the thread for refreshing playback data
 playback_thread = threading.Thread(target=refresh_playback_data)
