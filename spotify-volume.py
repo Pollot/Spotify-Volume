@@ -18,7 +18,7 @@ volume_step = 2   # The increment/decrement step size for volume adjustments
 max_volume = 100  # Maximum playback volume
 min_volume = 0    # Minimum playback volume
 bar_length = 25   # Volume bar length
-refresh_rate = 10 # Time in seconds to refresh playback data
+refresh_rate = 5  # Time in seconds to refresh playback data
 
 # Dynamic variables (don't modify them!)
 volume = 0          # Initial volume, it will change after playback has been started
@@ -39,7 +39,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secre
 def clear_terminal():
     os.system('cls' if os.name=='nt' else 'clear')
 
-# Prints in the same line
+# Print in the same line
 last_length = 0
 def print_inline(string):
     global last_length
@@ -71,8 +71,10 @@ def exception_handling(exception):
 
 def refresh_playback_data():
     current_song = None
-    global volume
+    current_is_playing = False
     global block_keys
+    global volume
+    global muted
     global restriction
 
     while True:
@@ -80,16 +82,21 @@ def refresh_playback_data():
 
         if playback_data:
             new_song = playback_data["item"]["name"]
+            new_is_playing = playback_data["is_playing"]
 
-            if current_song != new_song or block_keys == True:
+            if current_song != new_song or current_is_playing != new_is_playing or block_keys == True:
                 current_song = new_song
+                current_is_playing = new_is_playing
 
-                artists = ", ".join([artist["name"] for artist in playback_data["item"]["artists"]])
-                album = playback_data["item"]["album"]["name"]
-
-                clear_terminal()
-                print(f"Now playing: {current_song} by {artists}")
-                print(f"From: {album}")
+                if current_is_playing is False:
+                    clear_terminal()
+                    print("Playback paused")
+                else:    
+                    artists = ", ".join([artist["name"] for artist in playback_data["item"]["artists"]])
+                    album = playback_data["item"]["album"]["name"]
+                    clear_terminal()
+                    print(f"Now playing: {current_song} by {artists}")
+                    print(f"From: {album}")
                 
                 volume = int(playback_data["device"]["volume_percent"])
                 # Ensure that volume is divisible by volume_step
@@ -100,11 +107,12 @@ def refresh_playback_data():
                         volume -= 1
                 try:
                     sp.volume(volume)
+                    muted = False
                     restriction = False
                     print_volume(volume)
                 except SpotifyException as exception:
                     exception_handling(exception)
-                    sleep(20) # Increase refresh rate to avoid restriciton
+                    sleep(25) # Increase refresh rate to avoid restriction
                 
             if restriction is False:
                 block_keys = False
@@ -118,9 +126,9 @@ def refresh_playback_data():
         sleep(refresh_rate)
 
 # Start the thread for refreshing playback data
-song_thread = threading.Thread(target=refresh_playback_data)
-song_thread.daemon = True  # The thread will exit when the main program exits
-song_thread.start()
+playback_thread = threading.Thread(target=refresh_playback_data)
+playback_thread.daemon = True  # The thread will exit when the main program exits
+playback_thread.start()
 
 
 def volume_up(key):

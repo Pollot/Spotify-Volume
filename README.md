@@ -45,5 +45,5 @@ volume_step = 2   # The increment/decrement step size for volume adjustments
 max_volume = 100  # Maximum playback volume
 min_volume = 0    # Minimum playback volume
 bar_length = 25   # Volume bar length
-refresh_rate = 10 # Time in seconds to refresh playback data
+refresh_rate = 5  # Time in seconds to refresh playback data
 ```
